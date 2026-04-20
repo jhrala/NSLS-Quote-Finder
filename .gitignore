@@ -1,6 +1,9 @@
 # Claude Code project-level commands (contain local machine paths)
 .claude/
 
+# Internal planning docs — kept locally, not needed by team
+docs/
+
 # Local environment files
 .env
 .env.local
