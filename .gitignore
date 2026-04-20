@@ -1,0 +1,10 @@
+# Claude Code project-level commands (contain local machine paths)
+.claude/
+
+# Local environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db

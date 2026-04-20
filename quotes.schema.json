@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NSLS Speaker Broadcast Quote",
+  "description": "A single quotable statement extracted from an NSLS Speaker Broadcast transcript.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "speaker", "text", "episode", "date", "sourceFile", "themes", "addedDate"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier in the format YYYY-MM-DD-NNN (date added + sequence number).",
+        "example": "2026-04-20-001"
+      },
+      "speaker": {
+        "type": "string",
+        "description": "Full name of the person being quoted (the guest speaker, not the host).",
+        "example": "Jim Cramer"
+      },
+      "text": {
+        "type": "string",
+        "description": "The exact reconstructed quote text. Should be a complete, self-contained thought of at least ~25 words. Do not paraphrase.",
+        "example": "You have to be willing to fail. If you are not willing to fail, you are not going to succeed."
+      },
+      "episode": {
+        "type": "string",
+        "description": "The name of the Speaker Broadcast episode this quote came from.",
+        "example": "NSLS Speaker Broadcast — Jim Cramer"
+      },
+      "date": {
+        "type": "string",
+        "description": "Year (or full date if known) of the broadcast.",
+        "example": "2024"
+      },
+      "sourceFile": {
+        "type": "string",
+        "description": "Exact filename of the transcript file in Google Drive that this quote was extracted from.",
+        "example": "NSLS Speaker Broadcast - Jim Cramer.srt"
+      },
+      "themes": {
+        "type": "array",
+        "description": "2–5 theme tags that describe what this quote is about. Used for filtering and search.",
+        "items": {
+          "type": "string",
+          "enum": [
+            "leadership", "success", "failure", "resilience", "NSLS", "career",
+            "money", "investing", "entrepreneurship", "education", "self-belief",
+            "work ethic", "community", "growth mindset", "perseverance",
+            "student success", "mentorship", "purpose", "innovation"
+          ]
+        },
+        "minItems": 2,
+        "maxItems": 5,
+        "example": ["failure", "investing", "resilience"]
+      },
+      "addedDate": {
+        "type": "string",
+        "description": "ISO date (YYYY-MM-DD) when this quote was added to the database.",
+        "example": "2026-04-20"
+      }
+    }
+  }
+}
