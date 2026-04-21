@@ -5,7 +5,7 @@ Follow these steps exactly:
 ## Step 1 — Load the database
 Read the file at this exact path: `{{QUOTES_DB_PATH}}`
 
-If the file is empty or contains an empty array `[]`, tell the user to run `/ingest-quotes` first to populate it.
+If the file is empty or contains an empty array `[]`, tell the user to run `/update-quotes` first to populate it.
 
 ## Step 2 — Understand the query
 The query may be:
@@ -29,7 +29,7 @@ Return the top 8 quotes by score. If fewer than 8 have a score of 2 or higher, o
 Present each result like this:
 
 ---
-**[Speaker Name]** — *[Episode], [Date]*
+**[Speaker Name]** — *[Episode], [Date]* | Added: [addedDate]
 
 > "[Quote text]"
 
@@ -40,10 +40,10 @@ Present each result like this:
 After all results, add a brief footer:
 - Total quotes in database: [N]
 - Search query: "[the original query]"
-- To add more quotes, run `/ingest-quotes`
+- To add more quotes, run `/update-quotes`
 
 ## If no good matches exist
-Say: "No strong matches found for '[query]'. The database has [N] quotes total. Try a broader search, or run `/ingest-quotes` to add more broadcasts."
+Say: "No strong matches found for '[query]'. The database has [N] quotes total. Try a broader search, or run `/update-quotes` to add more broadcasts."
 
 ## Important
 - Never fabricate quotes. Only return quotes that exist in the JSON file.
