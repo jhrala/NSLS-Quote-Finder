@@ -32,6 +32,11 @@
         "description": "Year (or full date if known) of the broadcast.",
         "example": "2024"
       },
+      "timestamp": {
+        "type": "string",
+        "description": "The SRT start timecode (HH:MM:SS) of the first subtitle block that makes up this quote. Used by video editors to find the exact clip in the footage.",
+        "example": "00:15:32"
+      },
       "sourceFile": {
         "type": "string",
         "description": "Exact filename of the transcript file in Google Drive that this quote was extracted from.",

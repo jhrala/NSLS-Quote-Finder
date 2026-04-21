@@ -16,7 +16,7 @@ title contains 'Speaker Broadcast'
 
 List all files found. For each file, check if its `title` already exists in the `sourceFile` field of any quote in the database. Skip already-ingested files and note them in the final report.
 
-## Step 3 — Read and clean each new file
+## Step 3 — Read and parse each new file
 For each new file, use `read_file_content` with the file's ID.
 
 **Important — these files are SRT-format transcripts.** The raw content looks like:
@@ -28,13 +28,20 @@ WOMAN: Please welcome our host
 2
 00:00:11.825 --> 00:00:13.957
 for tonight's speaker broadcast,
+
+3
+00:01:45.210 --> 00:01:48.900
+CRAMER: You have to be willing to fail.
 ```
 
-To reconstruct readable text:
-1. Remove all lines that are just a number (sequence numbers)
-2. Remove all lines containing `-->` (timestamp lines)
-3. Join consecutive fragments from the same speaker into complete sentences
-4. Speaker labels like `BRACY:`, `CRAMER:`, `WOMAN:` mark speaker turns — use these to track who is speaking
+Parse each SRT block and retain its start timestamp alongside the text. Do NOT discard the timestamps — they are critical for video editing.
+
+For each block, extract:
+- **Start time**: the first timecode before `-->` (e.g. `00:01:45.210`)
+- **Speaker**: the label before the colon (e.g. `CRAMER`) if present
+- **Text**: the spoken words after the speaker label
+
+Join consecutive blocks from the same speaker into complete sentences, keeping the **start time of the first block** in the group as the timestamp for that passage.
 
 ## Step 4 — Identify the guest speaker
 From the filename and transcript, determine:
@@ -66,11 +73,14 @@ For each quote, assign 2–5 theme tags from:
   "text": "Exact reconstructed quote text.",
   "episode": "NSLS Speaker Broadcast — [Speaker Name]",
   "date": "YYYY",
+  "timestamp": "HH:MM:SS",
   "sourceFile": "Exact filename from Drive",
   "themes": ["theme1", "theme2"],
   "addedDate": "today's date"
 }
 ```
+
+`timestamp` is the SRT start time of the first subtitle block that makes up this quote, formatted as `HH:MM:SS` (drop the milliseconds). This is what the video editor uses to find the clip. It is required — do not omit it.
 
 For `id`: today's date + 3-digit sequence starting from 001, incrementing from the highest existing ID for today.
 
@@ -96,4 +106,4 @@ Errors: [any files that failed]
 ```
 
 ## If no new files are found
-Report: "All files in the Drive folder have already been ingested. Database has [N] quotes. Add new transcripts to the Drive folder and run `/ingest-quotes` again."
+Report: "All files in the Drive folder have already been ingested. Database has [N] quotes. Add new transcripts to the Drive folder and run `/update-quotes` again."

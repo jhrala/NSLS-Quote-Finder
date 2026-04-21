@@ -29,13 +29,16 @@ Return the top 8 quotes by score. If fewer than 8 have a score of 2 or higher, o
 Present each result like this:
 
 ---
-**[Speaker Name]** — *[Episode], [Date]* | Added: [addedDate]
+**[Speaker Name]** — *[Episode]*
+Video timestamp: **[timestamp]** (seek to this point in the footage) | Added: [addedDate]
 
 > "[Quote text]"
 
 *Why this matches:* [One sentence explaining the connection to the query]
 
 ---
+
+If a quote has no `timestamp` field (older entries ingested before this feature was added), omit that line rather than showing blank.
 
 After all results, add a brief footer:
 - Total quotes in database: [N]
