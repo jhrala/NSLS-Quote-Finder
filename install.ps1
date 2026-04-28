@@ -17,25 +17,28 @@ Write-Host "  Quotes DB:     $QuotesDb"
 Write-Host "  Commands dir:  $CommandsDir"
 Write-Host ""
 
-# Warn if commands already exist
-if ((Test-Path (Join-Path $CommandsDir "find-quotes.md")) -or (Test-Path (Join-Path $CommandsDir "update-quotes.md"))) {
-    Write-Host "  WARNING: Existing quote search commands found. They will be overwritten." -ForegroundColor Yellow
+# Warn if /find-quotes already exists
+if (Test-Path (Join-Path $CommandsDir "find-quotes.md")) {
+    Write-Host "  WARNING: Existing /find-quotes command found. It will be overwritten." -ForegroundColor Yellow
+    Write-Host ""
+}
+
+# Remove old /update-quotes command if present from a previous install
+$OldUpdateCmd = Join-Path $CommandsDir "update-quotes.md"
+if (Test-Path $OldUpdateCmd) {
+    Remove-Item $OldUpdateCmd -Force
+    Write-Host "  INFO: Removed old /update-quotes command (replaced by extract_quotes.py)." -ForegroundColor Yellow
     Write-Host ""
 }
 
 # Create ~/.claude/commands if it doesn't exist
 New-Item -ItemType Directory -Force -Path $CommandsDir | Out-Null
 
-# Install commands -- substitute {{QUOTES_DB_PATH}} with the real path
+# Install /find-quotes -- substitute {{QUOTES_DB_PATH}} with the real path
 $FindQuotesTemplate = Get-Content (Join-Path $RepoDir "commands\find-quotes.md") -Raw -Encoding utf8
 $FindQuotesTemplate = $FindQuotesTemplate -replace [regex]::Escape("{{QUOTES_DB_PATH}}"), $QuotesDb
 [System.IO.File]::WriteAllText((Join-Path $CommandsDir "find-quotes.md"), $FindQuotesTemplate, [System.Text.Encoding]::UTF8)
 Write-Host "  [OK] Installed /find-quotes" -ForegroundColor Green
-
-$UpdateTemplate = Get-Content (Join-Path $RepoDir "commands\update-quotes.md") -Raw -Encoding utf8
-$UpdateTemplate = $UpdateTemplate -replace [regex]::Escape("{{QUOTES_DB_PATH}}"), $QuotesDb
-[System.IO.File]::WriteAllText((Join-Path $CommandsDir "update-quotes.md"), $UpdateTemplate, [System.Text.Encoding]::UTF8)
-Write-Host "  [OK] Installed /update-quotes" -ForegroundColor Green
 
 # Create empty quotes.json if it doesn't already exist
 if (-not (Test-Path $QuotesDb)) {
@@ -58,12 +61,14 @@ Write-Host "--------------------------------------------------" -ForegroundColor
 Write-Host ""
 Write-Host "  Commands installed:"
 Write-Host "    /find-quotes [query]   - Search quotes by topic or theme"
-Write-Host "    /update-quotes         - Import new broadcasts from Google Drive"
+Write-Host ""
+Write-Host "  To add new quotes:"
+Write-Host "    python extract_quotes.py path\to\file.srt --speaker `"Name`" --date 2024"
+Write-Host "    python extract_quotes.py transcripts\      (batch process a folder)"
 Write-Host ""
 Write-Host "  Prerequisites:"
 Write-Host "    - Claude Code (claude.ai/code)"
-Write-Host "    - Google Drive MCP connected and authenticated"
-Write-Host "      -> See README.md for setup instructions"
+Write-Host "    - Python 3.9+ (for extract_quotes.py)"
 Write-Host ""
 Write-Host "  Restart Claude Code to pick up the new commands."
 Write-Host ""

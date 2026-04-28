@@ -23,8 +23,15 @@ echo "  Commands dir:  $COMMANDS_DIR"
 echo ""
 
 # Check for existing commands and warn
-if [ -f "$COMMANDS_DIR/find-quotes.md" ] || [ -f "$COMMANDS_DIR/update-quotes.md" ]; then
-    echo -e "${YELLOW}⚠️  Existing quote search commands found. They will be overwritten.${NC}"
+if [ -f "$COMMANDS_DIR/find-quotes.md" ]; then
+    echo -e "${YELLOW}⚠️  Existing /find-quotes command found. It will be overwritten.${NC}"
+    echo ""
+fi
+
+# Remove old /update-quotes command if present from a previous install
+if [ -f "$COMMANDS_DIR/update-quotes.md" ]; then
+    rm "$COMMANDS_DIR/update-quotes.md"
+    echo -e "${YELLOW}ℹ️  Removed old /update-quotes command (replaced by extract_quotes.py).${NC}"
     echo ""
 fi
 
@@ -33,10 +40,8 @@ mkdir -p "$COMMANDS_DIR"
 
 # Install commands — substitute {{QUOTES_DB_PATH}} with the real path
 sed "s|{{QUOTES_DB_PATH}}|$QUOTES_DB|g" "$REPO_DIR/commands/find-quotes.md" > "$COMMANDS_DIR/find-quotes.md"
-sed "s|{{QUOTES_DB_PATH}}|$QUOTES_DB|g" "$REPO_DIR/commands/update-quotes.md" > "$COMMANDS_DIR/update-quotes.md"
 
 echo -e "${GREEN}✓ Installed /find-quotes${NC}"
-echo -e "${GREEN}✓ Installed /update-quotes${NC}"
 
 # Create empty quotes.json if it doesn't exist yet
 if [ ! -f "$QUOTES_DB" ]; then
@@ -54,12 +59,14 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "  Commands installed:"
 echo "    /find-quotes [query]   — Search quotes by topic or theme"
-echo "    /update-quotes         — Import new broadcasts from Google Drive"
+echo ""
+echo "  To add new quotes:"
+echo "    python3 extract_quotes.py path/to/file.srt --speaker \"Name\" --date 2024"
+echo "    python3 extract_quotes.py transcripts/     (batch process a folder)"
 echo ""
 echo "  Prerequisites:"
 echo "    • Claude Code (claude.ai/code)"
-echo "    • Google Drive MCP connected and authenticated"
-echo "      → See README.md for setup instructions"
+echo "    • Python 3.9+ (for extract_quotes.py)"
 echo ""
 echo "  ⚡  Restart Claude Code to pick up the new commands."
 echo ""
