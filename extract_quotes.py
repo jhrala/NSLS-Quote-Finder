@@ -46,8 +46,21 @@ HOST_LABELS = {
 
 # Text patterns that indicate non-speech content — skip any block containing these.
 SKIP_PATTERNS = [
-    r"\[applause\]", r"\[music\]", r"\[laughter\]", r"\[cheering\]",
-    r"\[inaudible\]", r"\[crosstalk\]", r"\[crowd\]", r"\[noise\]",
+    # Markdown-escaped bracket forms: \[ applause \]
+    r"\\\[.*?applause.*?\\\]", r"\\\[.*?cheer.*?\\\]",
+    r"\\\[.*?music.*?\\\]",    r"\\\[.*?laughter.*?\\\]",
+    r"\\\[.*?crowd.*?\\\]",    r"\\\[.*?inaudible.*?\\\]",
+    r"\\\[.*?crosstalk.*?\\\]",r"\\\[.*?noise.*?\\\]",
+    r"\\\[.*?announcer.*?\\\]",r"\\\[.*?narrator.*?\\\]",
+    # Raw bracket forms: [applause]
+    r"\[applause\]", r"\[cheer", r"\[music\]", r"\[laughter\]",
+    r"\[crowd\]", r"\[inaudible\]", r"\[crosstalk\]",
+    r"\[announcer\]", r"\[narrator\]",
+    # Parenthesis forms: (applause), (upbeat music), (cheers and applause)
+    r"\(.*?applause.*?\)", r"\(.*?cheer.*?\)", r"\(.*?music.*?\)",
+    r"\(.*?laughter.*?\)", r"\(.*?crowd.*?\)", r"\(.*?inaudible.*?\)",
+    r"\(.*?audience.*?\)",
+    # URLs
     r"www\.", r"http", r"\.com", r"\.org",
 ]
 SKIP_REGEX = re.compile("|".join(SKIP_PATTERNS), re.IGNORECASE)
@@ -127,7 +140,7 @@ def parse_srt(text: str) -> list[dict]:
 
         # Line 1: timestamps  e.g. 00:01:23,456 --> 00:01:25,789
         ts_match = re.match(
-            r"(\d{2}:\d{2}:\d{2})[,.](\d+)\s*-->\s*(\d{2}:\d{2}:\d{2})[,.](\d+)",
+            r"(\d{2}:\d{2}:\d{2})[,.](\d+)\s*--\\?>?\s*(\d{2}:\d{2}:\d{2})[,.](\d+)",
             lines[1],
         )
         if not ts_match:
@@ -176,50 +189,64 @@ def join_blocks(blocks: list[dict]) -> list[dict]:
         return []
 
     passages = []
-    current_label, current_text = extract_speaker_label(blocks[0]["text"])
-    current_start = blocks[0]["start"]
-    current_words = [current_text] if current_text else []
+    current_label: str | None = None
+    current_start: str | None = None
+    current_words: list[str] = []
 
-    for block in blocks[1:]:
+    def flush():
+        nonlocal current_label, current_start, current_words
+        if current_words:
+            passages.append({
+                "start": current_start,
+                "label": current_label,
+                "text": " ".join(current_words),
+            })
+        current_label = None
+        current_start = None
+        current_words = []
+
+    for block in blocks:
         # Non-speech blocks (applause, music, URLs) break the current passage.
-        # Don't append them as continuations — flush and start fresh.
         if SKIP_REGEX.search(block["text"]):
-            if current_words:
-                passages.append({
-                    "start": current_start,
-                    "label": current_label,
-                    "text": " ".join(current_words),
-                })
-            current_label = None
-            current_start = None
-            current_words = []
+            flush()
             continue
 
-        label, text = extract_speaker_label(block["text"])
+        # Dash-prefix format: "- text" marks a speaker-change boundary (WebVTT/newer SRT).
+        raw_text = block["text"]
+        if raw_text.startswith("- "):
+            flush()
+            raw_text = raw_text[2:].strip()
+            if not raw_text or SKIP_REGEX.search(raw_text):
+                continue
+            current_label = None
+            current_start = block["start"]
+            current_words = [raw_text]
+            continue
 
-        # If a new speaker label appears, flush the current passage
-        if label is not None and label != current_label:
-            if current_words:
-                passages.append({
-                    "start": current_start,
-                    "label": current_label,
-                    "text": " ".join(current_words),
-                })
+        label, text = extract_speaker_label(raw_text)
+
+        if not text:
+            continue
+
+        # If current passage is empty (start of transcript or after skip/flush),
+        # always start fresh — don't inherit a None start timestamp.
+        if not current_words:
             current_label = label
             current_start = block["start"]
-            current_words = [text] if text else []
+            current_words = [text]
+            continue
+
+        # If a new speaker label appears, flush and start a new passage.
+        if label is not None and label != current_label:
+            flush()
+            current_label = label
+            current_start = block["start"]
+            current_words = [text]
         else:
-            # Continuation — same speaker (or no label)
-            if text:
-                current_words.append(text)
+            # Continuation — same speaker (or unlabeled continuation)
+            current_words.append(text)
 
-    if current_words:
-        passages.append({
-            "start": current_start,
-            "label": current_label,
-            "text": " ".join(current_words),
-        })
-
+    flush()
     return passages
 
 
@@ -285,6 +312,46 @@ def next_ids(existing: list[dict], count: int) -> list[str]:
 # Core extraction
 # ---------------------------------------------------------------------------
 
+def split_into_quotes(text: str, min_words: int, max_words: int) -> list[str]:
+    """
+    Split a long passage into quote-sized chunks at sentence boundaries.
+    Each chunk will be between min_words and max_words in length.
+    """
+    # Split on sentence-ending punctuation followed by whitespace
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_wc = 0
+
+    for sentence in sentences:
+        swc = len(sentence.split())
+        # If adding this sentence would exceed max_words AND we already have enough
+        if current_wc + swc > max_words and current_wc >= min_words:
+            chunks.append(" ".join(current))
+            current = [sentence]
+            current_wc = swc
+        else:
+            current.append(sentence)
+            current_wc += swc
+
+    if current:
+        joined = " ".join(current)
+        if len(joined.split()) >= min_words:
+            chunks.append(joined)
+
+    return chunks
+
+
+def detect_guest_labels(speaker: str) -> set[str]:
+    """
+    Derive likely SRT speaker labels from the speaker's name.
+    e.g. "Jim Cramer" → {"jim", "cramer"}, "Dr. Shefali" → {"shefali", "dr"}
+    """
+    parts = re.split(r"[\s.\-]+", speaker.upper())
+    return {p.lower() for p in parts if len(p) > 2}
+
+
 def extract_from_srt(
     srt_path: Path,
     speaker: str,
@@ -292,36 +359,60 @@ def extract_from_srt(
     broadcast_date: str,
     speaker_type: str,
     min_words: int,
+    max_words: int = 200,
 ) -> list[dict]:
     """
     Parse one SRT file and return a list of quote dicts (without id/addedDate).
+
+    Guest detection: derives likely SRT speaker labels from the speaker name
+    (e.g. "Jim Cramer" → looks for CRAMER: labels). None-labeled passages that
+    appear before the first guest-labeled block are treated as host content and
+    excluded. None-labeled passages after the first guest block are included
+    (guests frequently speak in long unlabeled runs after an initial label).
     """
     raw = srt_path.read_text(encoding="utf-8", errors="replace")
     blocks = parse_srt(raw)
     passages = join_blocks(blocks)
 
+    # Find the index of the first passage labeled as the guest
+    guest_labels = detect_guest_labels(speaker)
+    first_guest_idx: int | None = None
+    for i, p in enumerate(passages):
+        if p["label"] in guest_labels:
+            first_guest_idx = i
+            break
+
     quotes = []
-    for passage in passages:
+    for i, passage in enumerate(passages):
         label = passage["label"]
         text = passage["text"].strip()
 
+        # Always skip known host labels and non-speech content
         if should_skip(text, label):
+            continue
+
+        # Skip unlabeled passages that come before the guest's first appearance
+        # (these are typically host announcements/intros)
+        if label is None and first_guest_idx is not None and i < first_guest_idx:
             continue
 
         word_count = len(text.split())
         if word_count < min_words:
             continue
 
-        quotes.append({
-            "speaker": speaker,
-            "speakerType": speaker_type,
-            "text": text,
-            "episode": episode,
-            "date": broadcast_date,
-            "timestamp": passage["start"],
-            "sourceFile": srt_path.name,
-            "themes": assign_themes(text),
-        })
+        # Split long passages into quote-sized chunks
+        chunks = split_into_quotes(text, min_words, max_words)
+        for chunk in chunks:
+            quotes.append({
+                "speaker": speaker,
+                "speakerType": speaker_type,
+                "text": chunk,
+                "episode": episode,
+                "date": broadcast_date,
+                "timestamp": passage["start"],
+                "sourceFile": srt_path.name,
+                "themes": assign_themes(chunk),
+            })
 
     return quotes
 
@@ -428,6 +519,13 @@ def main():
         help="Minimum word count for a passage to be included (default: 30).",
     )
     parser.add_argument(
+        "--max-words",
+        dest="max_words",
+        type=int,
+        default=200,
+        help="Maximum word count per quote — longer passages are split at sentence boundaries (default: 200).",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Parse and preview quotes but do NOT write to the database.",
@@ -475,6 +573,7 @@ def main():
             broadcast_date=meta["date"],
             speaker_type=meta["speaker_type"],
             min_words=args.min_words,
+            max_words=args.max_words,
         )
         print(f"{len(new_quotes)} passages found.")
 
