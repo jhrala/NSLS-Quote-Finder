@@ -5,7 +5,7 @@
   "type": "array",
   "items": {
     "type": "object",
-    "required": ["id", "speaker", "text", "episode", "date", "sourceFile", "themes", "addedDate"],
+    "required": ["id", "speaker", "speakerType", "text", "episode", "date", "sourceFile", "themes", "addedDate"],
     "properties": {
       "id": {
         "type": "string",
@@ -16,6 +16,12 @@
         "type": "string",
         "description": "Full name of the person being quoted (the guest speaker, not the host).",
         "example": "Jim Cramer"
+      },
+      "speakerType": {
+        "type": "string",
+        "description": "Category of speaker. Used to filter searches by source type (e.g. 'a student talking about leadership').",
+        "enum": ["speaker-broadcast", "student", "advisor", "member"],
+        "example": "speaker-broadcast"
       },
       "text": {
         "type": "string",
