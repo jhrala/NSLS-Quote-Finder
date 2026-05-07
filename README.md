@@ -38,51 +38,28 @@ New quotes are added by the repo maintainer using the included Python scripts (n
 
 ## Installation
 
-### Step 1 — Clone the repo
-
 **Mac / Linux:**
 ```bash
-git clone https://github.com/jhrala/NSLS-Quote-Finder.git
-cd NSLS-Quote-Finder
+git clone https://github.com/jhrala/NSLS-Quote-Finder.git && cd NSLS-Quote-Finder && chmod +x install.sh && ./install.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/jhrala/NSLS-Quote-Finder.git
-cd NSLS-Quote-Finder
+git clone https://github.com/jhrala/NSLS-Quote-Finder.git; cd NSLS-Quote-Finder; .\install.ps1
 ```
 
-### Step 2 — Run the installer
-
-**Mac / Linux:**
-```bash
-chmod +x install.sh
-./install.sh
-```
-
-**Windows (PowerShell):**
-```powershell
-.\install.ps1
-```
-
-> **Windows note:** If you see a security error, run this first, then re-run the installer:
+> **Windows note:** If you see a security error, run this first, then re-run the one-liner above:
 > ```powershell
 > Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 > ```
 
 The installer copies the `/find-quotes` command into `~/.claude/commands/` and wires it up to the `quotes.json` file in your cloned repo.
 
-### Step 3 — Restart Claude Code
-
-Quit and reopen Claude Code to pick up the new command.
-
-### Step 4 — Search
+**After installing, restart Claude Code** to pick up the new command, then search:
 
 ```
 /find-quotes [your query]
 ```
-
-That's it. No further setup required.
 
 ---
 
